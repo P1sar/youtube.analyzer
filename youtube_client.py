@@ -1,13 +1,13 @@
 from googleapiclient.discovery import build
 
+
 class YouTubeClient(object):
     def __init__(self, api_key):
-        self.api_key=api_key
-        self.api_service_name="youtube"
-        self.api_version="v3"
+        self.api_key = api_key
+        self.api_service_name = "youtube"
+        self.api_version = "v3"
         self.youtube = build(self.api_service_name, self.api_version, developerKey=self.api_key)
 
-        
     def get_play_list_items(self, plId):
         return self.youtube.playlistItems().list(
             part="snippet",
@@ -15,16 +15,16 @@ class YouTubeClient(object):
             maxResults=2
         ).execute()
 
-    def getPlaylists(self, channelID):
+    def get_play_lists(self, channelID):
         return self.youtube.playlists().list(
             part="snippet,contentDetails",
             channelId=channelID,
             maxResults=50
         ).execute()
 
-    def getChannelDetails(self, channelID):
+    def get_channel_details(self, channelID):
         return self.youtube.channels().list(
-            part="contentDetails",
+            part="snippet",
             id=channelID
         ).execute()
 
@@ -46,11 +46,11 @@ class YouTubeClient(object):
             id=id
         ).execute()
 
-    def searh_videos(self, channelId, maxResults=25):
+    def search_videos(self, channel_id, max_results=25):
         return self.youtube.search().list(
             part="snippet",
-            channelId=channelId,
+            channelId=channel_id,
             order="date",
             type="video",
-            maxResults=maxResults
+            maxResults=max_results
         ).execute()

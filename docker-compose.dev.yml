@@ -9,20 +9,23 @@ services:
         - MINIO_ACCESS_KEY=minio-key
         - MINIO_SECRET_KEY=minio-secret
       volumes:
-        - y-analyzer:/data
+        - y-analyzer:/var/lib/minio/data
+      networks:
+        - dev
 
-#    mongo:
-#        image: mongo
-#        restart: always
-#        ports:
-#          - 27017:27017
-#        environment:
-#          MONGO_INITDB_ROOT_USERNAME: root
-#          MONGO_INITDB_ROOT_PASSWORD: password
-#        volumes:
-#          - yscrapper_mongo_data:/data/db
-#        networks:
-#          - dev
+    postgres:
+      image: postgres
+      container_name: postgres
+      restart: always
+      ports:
+        - 5432:5432
+      environment:
+        POSTGRES_PASSWORD: password
+        POSTGRES_DB: videos-data
+      volumes:
+        - y-analyzer:/var/lib/postgresql/data
+      networks:
+        - dev
 
 volumes:
   y-analyzer:
