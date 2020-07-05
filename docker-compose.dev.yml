@@ -1,21 +1,31 @@
 version: "3.1"
 
 services:
-    mongo:
-        image: mongo
-        restart: always
-        ports:
-          - 27017:27017
-        environment:
-          MONGO_INITDB_ROOT_USERNAME: root
-          MONGO_INITDB_ROOT_PASSWORD: password
-        volumes:
-          - yscrapper_mongo_data:/data/db
-        networks:
-          - dev
+    minio:
+      image: 'bitnami/minio:latest'
+      ports:
+        - '9000:9000'
+      environment:
+        - MINIO_ACCESS_KEY=minio-key
+        - MINIO_SECRET_KEY=minio-secret
+      volumes:
+        - y-analyzer:/data
+
+#    mongo:
+#        image: mongo
+#        restart: always
+#        ports:
+#          - 27017:27017
+#        environment:
+#          MONGO_INITDB_ROOT_USERNAME: root
+#          MONGO_INITDB_ROOT_PASSWORD: password
+#        volumes:
+#          - yscrapper_mongo_data:/data/db
+#        networks:
+#          - dev
 
 volumes:
-  yscrapper_mongo_data:
+  y-analyzer:
     external: true
 networks:
   dev:

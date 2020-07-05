@@ -1,73 +1,33 @@
-service: project-beta
-
-package:
-  include:
-    - bin/**
-
-plugins:
-  - serverless-finch
+service: youtube-analyzer
 
 custom:
-  inputBucket: report-input
-  client:
-    bucketName: project.beta.client.hosting
-    distributionFolder: frontend/build
+  channelsBucket: analyzer-channels
+#  pythonRequirements:
+#    dockerizePip: non-linux
 
+package:
+  exclude:
+    - node_modules/**
 
 provider:
   name: aws
-  runtime: go1.x
-  vpc:
-    securityGroupIds:
-      - Fn::GetAtt: [VPCStaticIP, DefaultSecurityGroup]
-    subnetIds:
-      - Ref: SubnetPrivate
+  runtime: python3.8
   iamRoleStatements:
     - Effect: Allow
       Action:
         - s3:*
       Resource: "*"
-    - Effect: Allow
-      Action:
-        - "sqs:SendMessage"
-      Resource:
-        Fn::GetAtt: [ClearedReportQueue, Arn]
-    - Effect: Allow
-      Action:
-        - "sqs:SendMessage"
-      Resource:
-        Fn::GetAtt: [ContentMapQueue, Arn]
-    - Effect: Allow
-      Action:
-        - lambda:InvokeFunction
-      Resource: "*"
-    - Effect: Allow
-      Action:
-        - ec2:CreateNetworkInterface
-        - ec2:DeleteNetworkInterface
-        - ec2:DescribeNetworkInterfaces
-        - ec2:CreateInternetGateway
-        - ec2:allocateAddress
-        - ec2:CreateVpc
-      Resource: '*'
+  region: eu-central-1
+  stage: develop
 
 functions:
-  lambda-scrapper:
-    handler: bin/lambda-clearer
+  starter:
+    handler: handler.run
     environment:
+      BUCKET_NAME: ${self:custom.channelsBucket}
     events:
-      - s3:
-          bucket: ${self:custom.inputBucket}
-          event: s3:ObjectCreated:*
-          rules:
-            - suffix: .json
-resources:
-  Resources:
-    ClearedReportQueue:
-      Type: "AWS::SQS::Queue"
-      Properties:
-        QueueName: "ClearedReportQueue"
-    ContentMapQueue:
-      Type: "AWS::SQS::Queue"
-      Properties:
-        QueueName: "ContentMapQueue"
+      - schedule: rate(5 minutes)
+
+
+plugins:
+  - serverless-python-requirements

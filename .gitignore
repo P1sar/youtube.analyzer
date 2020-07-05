@@ -1,5 +1,6 @@
 *.html
 .vscode/*
+.idea/*
 [Bb]in
 [Ii]nclude
 [Ll]ib
@@ -26,3 +27,5 @@ var/
 .installed.cfg
 *.egg
 .idea_modules/
+node_modules/
+.serverless/

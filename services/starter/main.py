@@ -1,11 +1,4 @@
-import os
-import json
-import googleapiclient.errors
-
-from google_auth_oauthlib import flow
-from google.auth.credentials import Credentials
-from googleapiclient.discovery import build
-from client import YouTubeClient
+from services.scrapper.client import YouTubeClient
 from mongo import MongoClient
 
 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
