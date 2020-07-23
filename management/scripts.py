@@ -5,14 +5,14 @@ import os
 import config as my_config
 
 from sqlalchemy.orm import load_only, sessionmaker
-from postgres.models import Channel
+from postgres.models import Channel, AccountKey
 from sqlalchemy import create_engine
-from s3 import S3Client`
+from s3 import S3Client
 
 
 def propagate_db_with_channels_from_s3():
-    channels_provider = S3Client(key="minio-key",secret="minio-secret", endpoint_url="http://localhost:9000")
-    channels_map = channels_provider.channels_map(os.environ.get("BUCKET_NAME", "channels"), os.environ.get("CHANNELS_FILENAME", "channels.csv"))
+    s3_provider = S3Client(key="minio-key", secret="minio-secret", endpoint_url="http://localhost:9000")
+    channels_map = s3_provider.channels_map(os.environ.get("BUCKET_NAME", "channels"), os.environ.get("CHANNELS_FILENAME", "channels.csv"))
 
     engine = create_engine(my_config.DATABASE_URI)
     Session = sessionmaker(bind=engine)
@@ -32,3 +32,21 @@ def propagate_db_with_channels_from_s3():
 
 
 propagate_db_with_channels_from_s3()
+
+
+def propagate_db_with_api_keys():
+    s3_provider = S3Client(key="minio-key", secret="minio-secret", endpoint_url="http://localhost:9000")
+    keys_arr = s3_provider.keys_array(os.environ.get("BUCKET_NAME", "channels"), os.environ.get("CHANNELS_FILENAME", "apiKeys.txt"))
+
+    engine = create_engine(my_config.DATABASE_URI)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    existedKyes = [k.key for k in session.query(AccountKey).all()]
+    account_keys = [AccountKey(key=k.decode('UTF-8').replace("\r\n", "")) for k in list(filter(lambda k: k.decode('UTF-8').replace("\r\n", "") not in existedKyes, keys_arr))]
+    print("Keys to add {}".format(len(account_keys)))
+    session.bulk_save_objects(account_keys)
+    session.commit()
+
+
+propagate_db_with_api_keys()

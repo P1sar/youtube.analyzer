@@ -21,3 +21,10 @@ class S3Client(object):
         f.seek(0)
         return {line.decode('utf-8').split(",")[-1].strip().split("/")[-1]: line.decode('utf-8').split(",")[0] for line in f.readlines()}
 
+    def keys_array(self, bucket_name, filename):
+        f = BytesIO()
+        self.s3.download_fileobj(bucket_name, filename, f)
+        f.seek(0)
+        return [line for line in f.readlines()]
+
+

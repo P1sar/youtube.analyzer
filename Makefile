@@ -1,4 +1,7 @@
 .PHONY: deploy
 
-deploy:
-	serverless deploy --verbose
+migrate:
+	alembic upgrade head
+
+generate-migration:
+    alembic revision --autogenerate -m $(msg)
