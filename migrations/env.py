@@ -7,7 +7,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from postgres import models
 from alembic import context
-import config as my_config
+import os
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -17,7 +17,10 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 
-config.set_main_option('sqlalchemy.url', my_config.DATABASE_URI)
+env_var = os.environ
+database_uri = env_var.get("DATABASE_URI", "postgres://postgres:password@localhost:5432/videos-data")
+
+config.set_main_option('sqlalchemy.url', database_uri)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

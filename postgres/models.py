@@ -25,6 +25,7 @@ class Video(Base):
     name = Column(String)
     description = Column(Text)
     added_at = Column(DateTime)
+    parsed_at = Column(DateTime)
     channel_id = Column(String, ForeignKey('channel.id'), nullable=False)
 
 
@@ -43,6 +44,7 @@ class KeyValue(Base):
 
     id = Column(String, primary_key=True)
     value = Column(String)
+
     @staticmethod
     def get_time_of_last_execution(session):
         kv = session.query(KeyValue).get('lte')

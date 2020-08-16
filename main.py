@@ -1,30 +1,10 @@
 import asyncio
 from aio_youtube_client import AioYoutubeClient
 from sqlalchemy import create_engine
-import config as my_config
-from sqlalchemy.orm import load_only, sessionmaker
+from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from postgres import models
-
-
-#TODO: except out of credits exeption. And log it properly
-async def get_videos(channel_id, published_after):
-    aio_youtube_client = AioYoutubeClient(api_key="AIzaSyCDOu0GKzY_6DIib3gGYQ5XZIJ9n-6Zkmk",
-                                          base_url="https://www.googleapis.com/youtube/v3")
-    res = await aio_youtube_client.search(channel_id, published_after=published_after, max_results=10)
-    videos = []
-    print(res)
-    items = res.get("items", None)
-    if items is None:
-        raise Exception
-    for r in items:
-        date_time_obj = datetime.strptime(r["snippet"]["publishedAt"], '%Y-%m-%dT%H:%M:%SZ')
-        v = models.Video(id=r["id"]["videoId"],
-                         name=r["snippet"]["title"],
-                         description=r["snippet"]["description"],
-                         added_at=date_time_obj, channel_id=r["snippet"]["channelId"])
-        videos.append(v)
-    return videos
+import os
 
 
 class KeysProviderSync(object):
@@ -43,17 +23,48 @@ class KeysProviderSync(object):
                 self.reuses = 0
 
 
-async def fetch_video(channel_id, kp, lock):
-    async with lock:
-        k = next(kp)
-    await asyncio.sleep(2)
-    print("channel_id:{} key:{}".format(channel_id, k))
+#TODO: except out of credits exeption. And log it properly
+async def fetch_video(channel_id, kp, published_after, lock):
+    credError = True
+    while credError:
+        async with lock:
+            k = next(kp)
+        yclient = AioYoutubeClient(api_key=k, base_url="https://www.googleapis.com/youtube/v3")
+        res = await yclient.search(channel_id, published_after=published_after, max_results=30)
+        e = res.get("error")
+        if e:
+            if "The request cannot be completed because you have exceeded your" in e.get("message"):
+                print("cred error excited retrying")
+                continue
+        else:
+            credError = False
+
+    print(res)
+    videos = []
+    items = res.get("items", None)
+    if items is None:
+        raise Exception
+    for r in items:
+        date_time_obj = datetime.strptime(r["snippet"]["publishedAt"], '%Y-%m-%dT%H:%M:%SZ')
+        v = models.Video(id=r["id"]["videoId"],
+                         name=r["snippet"]["title"],
+                         description=r["snippet"]["description"],
+                         parsed_at=datetime.utcnow(),
+                         added_at=date_time_obj,
+                         channel_id=r["snippet"]["channelId"])
+        videos.append(v)
+    return videos
 
 
 async def main():
-    engine = create_engine(my_config.DATABASE_URI)
+    env_var = os.environ
+    database_uri = env_var.get("DATABASE_URI", "postgres://postgres:password@localhost:5432/videos-data")
+    fetch_freq = env_var.get("FETCH_FREQ", "5")
+    engine = create_engine(database_uri)
     session_fabric = sessionmaker(bind=engine)
     session = session_fabric()
+
+    published_after = models.KeyValue.get_time_of_last_execution(session)
 
     while True:
         channels_ids = models.Channel.get_channels_ids(session)
@@ -61,10 +72,17 @@ async def main():
         kp = KeysProviderSync(keys=keys)
         ks = kp.get_key()
         lock = asyncio.Lock()
-        tasks = [fetch_video(channel_id, ks, lock) for channel_id in channels_ids[:100]]
+        tasks = [fetch_video(channel_id, ks, published_after, lock) for channel_id in channels_ids[:8]]
         videos = []
-        await asyncio.wait(tasks)
-        await asyncio.sleep(15)
+        for future in asyncio.as_completed(tasks):
+            result = await future
+            videos += result
+            print(len(videos))
+        published_after = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+        models.KeyValue.set_time_of_last_execution(session, published_after)
+        session.bulk_save_objects(videos)
+        session.commit()
+        await asyncio.sleep(int(fetch_freq))
 
 
 loop = asyncio.get_event_loop()
@@ -73,19 +91,3 @@ try:
     loop.run_until_complete(task)
 finally:
     loop.close()
-
-
-    # published_after = models.KeyValue.get_time_of_last_execution(session)
-    #
-    # existed_channels = session.query(models.Channel).options(load_only("id")).all()
-    # channel_id_ids = [c.id for c in existed_channels]
-    # videos = []
-    # tasks = [get_videos(channel_id, published_after) for channel_id in channel_id_ids[:10]]
-    # for future in asyncio.as_completed(tasks):
-    #     result = await future
-    #     videos += result
-    #
-    # models.KeyValue.set_time_of_last_execution(session, datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))
-    #
-    # session.bulk_save_objects(videos)
-    # session.commit()
