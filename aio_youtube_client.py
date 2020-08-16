@@ -1,10 +1,7 @@
 import aiohttp
-import asyncio
 
 
 class AioYoutubeClient(object):
-    """Asynchronous youtube service client"""
-
     def __init__(self, api_key, base_url):
         self.api_key = api_key
         self.base_url = base_url

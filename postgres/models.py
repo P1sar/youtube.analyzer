@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, ForeignKey, DateTime, Text
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, load_only
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -12,6 +12,10 @@ class Channel(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     videos = relationship("Video", backref=backref('videos', uselist=True))
+
+    @staticmethod
+    def get_channels_ids(session):
+        return [c.id for c in session.query(Channel).all()]
 
 
 class Video(Base):
@@ -29,13 +33,16 @@ class AccountKey(Base):
 
     key = Column(String, primary_key=True)
 
+    @staticmethod
+    def get_all_keys(session):
+        return [k.key for k in session.query(AccountKey).all()]
+
 
 class KeyValue(Base):
     __tablename__ = 'kv'
 
     id = Column(String, primary_key=True)
     value = Column(String)
-
     @staticmethod
     def get_time_of_last_execution(session):
         kv = session.query(KeyValue).get('lte')
@@ -47,4 +54,3 @@ class KeyValue(Base):
     @staticmethod
     def set_time_of_last_execution(session, time):
         session.query(KeyValue).filter(KeyValue.id == 'lte').update({"value": time})
-
